@@ -92,7 +92,6 @@ void setup()
   
   usb_msc.begin();
 
-
   // Set up button
   pinMode(pin, activeState ? INPUT_PULLDOWN : INPUT_PULLUP);
 

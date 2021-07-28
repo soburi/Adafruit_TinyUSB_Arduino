@@ -68,12 +68,15 @@ Adafruit_USBD_MSC usb_msc;
 
 // Set to true when PC write to flash
 bool sd_changed = false;
+
+bool flash_formatted = false;
 bool flash_changed = false;
 
 // the setup function runs once when you press reset or power the board
 void setup()
 {
   pinMode(LED_BUILTIN, OUTPUT);
+  Serial.begin(115200);
 
   // MSC with 2 Logical Units
   usb_msc.setMaxLun(2);
@@ -89,7 +92,7 @@ void setup()
 
   //------------- Lun 0 for external flash -------------//
   flash.begin();
-  fatfs.begin(&flash);
+  flash_formatted = fatfs.begin(&flash);
 
   usb_msc.setCapacity(0, flash.size()/512, 512);
   usb_msc.setReadWriteCallback(0, external_flash_read_cb, external_flash_write_cb, external_flash_flush_cb);
@@ -108,7 +111,6 @@ void setup()
     sd_changed = true; // to print contents initially
   }
 
-  Serial.begin(115200);
   //while ( !Serial ) delay(10);   // wait for native usb
 
   Serial.println("Adafruit TinyUSB Mass Storage External Flash + SD Card example");
@@ -141,20 +143,31 @@ void loop()
 {
   if ( flash_changed )
   {
-    File root;
-    root = fatfs.open("/");
-
-    Serial.println("Flash contents:");
-    print_rootdir(&root);
-    Serial.println();
-
-    root.close();
-
     flash_changed = false;
+
+    if (!flash_formatted)
+    {
+      flash_formatted = fatfs.begin(&flash);
+    }
+
+    // skip if still not formatted
+    if (flash_formatted)
+    {
+      File root;
+      root = fatfs.open("/");
+
+      Serial.println("Flash contents:");
+      print_rootdir(&root);
+      Serial.println();
+
+      root.close();
+    }
   }
 
   if ( sd_changed )
   {
+    sd_changed = false;
+
     File root;
     root = sd.open("/");
 
@@ -163,8 +176,6 @@ void loop()
     Serial.println();
 
     root.close();
-
-    sd_changed = false;
   }
 
   delay(1000); // refresh every 1 second
